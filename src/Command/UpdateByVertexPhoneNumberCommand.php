@@ -127,6 +127,7 @@ class UpdateByVertexPhoneNumberCommand extends Command
         $output->writeln('<info>Done.</info>');
 
         if(!empty($phoneNumbersNotFound)) {
+            $output->writeln( '<comment>' . count($phoneNumbersNotFound) . ' phone numbers out of ' . count($requestOutput) . ' were not found in the database.</comment>');
             $output->writeln('<comment>Phone numbers that have not been found in the database: ' . json_encode(array_unique($phoneNumbersNotFound)) . '</comment>');
         }
     }
