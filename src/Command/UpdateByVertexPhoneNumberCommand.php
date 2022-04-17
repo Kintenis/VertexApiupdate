@@ -6,13 +6,15 @@ namespace App\Command;
 
 use App\Entity\LoyaltyClients;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class UpdateByVertexPhoneNumberCommand extends Command
 {
-    public const MAX_RECORDS_PER_PAGE = 3;
+    public const MAX_RECORDS_PER_PAGE = 1000;
 
     private ManagerRegistry $managerRegistry;
 
@@ -101,6 +103,9 @@ class UpdateByVertexPhoneNumberCommand extends Command
         $entityManager = $this->managerRegistry->getManager();
         $phoneNumbersNotFound = [];
 
+        $progressBar = new ProgressBar($output, count($requestOutput));
+        $progressBar->start();
+
         foreach ($requestOutput as $phoneNumber) {
             $loyaltyData = $entityManager->getRepository(LoyaltyClients::class)->findOneBy(['mobile' => $phoneNumber]);
 
@@ -118,17 +123,23 @@ class UpdateByVertexPhoneNumberCommand extends Command
 
                     $entityManager->flush();
                 }
+
+                $progressBar->advance();
             } else {
                 $phoneNumbersNotFound[] = $phoneNumber;
+                $progressBar->advance();
             }
-            dump($loyaltyData);
+            //dump($loyaltyData);
         }
 
-        $output->writeln('<info>Done.</info>');
+        $progressBar->finish();
+        $output->writeln('<info> Done.</info>');
 
         if(!empty($phoneNumbersNotFound)) {
-            $output->writeln( '<comment>' . count($phoneNumbersNotFound) . ' phone numbers out of ' . count($requestOutput) . ' were not found in the database.</comment>');
-            $output->writeln('<comment>Phone numbers that have not been found in the database: ' . json_encode(array_unique($phoneNumbersNotFound)) . '</comment>');
+            $output->writeln( '<comment>' . count($phoneNumbersNotFound) . ' phone numbers out of ' . count($requestOutput) . ' were not found in the database. (var/log/phoneNumbersNotFound.json)</comment>');
+
+            $filesystem = new Filesystem();
+            $filesystem->dumpFile('var/log/phoneNumbersNotFound.json', json_encode(array_unique($phoneNumbersNotFound), JSON_PRETTY_PRINT));
         }
     }
 }
